@@ -97,6 +97,9 @@ contexts:
     - include: field_decl
     - include: block
     - include: function_def
+    - include: constant_def
+    - include: variable_def
+    - include: public
     - include: function_call
     - include: enum_literal
     - include: variables
@@ -119,11 +122,62 @@ contexts:
   function_call:
     - match: '\b([a-zA-Z_]\w*|@\".+\")(?=\s*\()'
       scope: variable.function.zig
+  # XXX(mason): any way to avoid all this duplication?
+  public:
+    - match: '\b(pub)\s+'
+      captures:
+        1: storage.modifier.zig
+      push:
+      # Public constant def
+      - match: '\b(const)\s+([a-zA-Z_]\w*|@\".+\"):? ([a-zA-Z_][\w.]*|@\".+\")?'
+        captures:
+          1: storage.modifier.zig
+          2: variable.other.constant.zig_public
+          3: storage.type.zig
+        pop: true
+      # Public variable def
+      - match: '\b(var)\s+([a-zA-Z_]\w*|@\".+\"):? ([a-zA-Z_][\w.]*|@\".+\")?'
+        captures:
+          1: storage.modifier.zig
+          2: variable.other.zig_public
+          3: storage.type.zig
+        pop: true
+      # Public function def
+      - match: '\b(fn)\s+([a-zA-Z_]\w*|@\".+\")(\()'
+        captures:
+          1: storage.type.function.zig
+          2: entity.name.function.zig_public
+          3: punctuation.section.parens.begin.zig
+        push:
+          - include: label
+          - include: param_list
+          - match: '([a-zA-Z_][\w.]*|@\".+\")'
+            scope: storage.type.zig
+          - match: '\)'
+            scope: punctuation.section.parens.end.zig
+            set: function_def_after_params
+          - include: dummy_main
+        pop: true
+      # Bailout if we don't find what we want
+      - match: (?=.)
+        pop: true
+  constant_def:
+    - match: '\b(const)\s+([a-zA-Z_]\w*|@\".+\"):? ([a-zA-Z_][\w.]*|@\".+\")?'
+      captures:
+        1: storage.modifier.zig
+        2: variable.other.constant.zig_local
+        3: storage.type.zig
+  variable_def:
+    - match: '\b(var)\s+([a-zA-Z_]\w*|@\".+\"):? ([a-zA-Z_][\w.]*|@\".+\")?'
+      captures:
+        1: storage.modifier.zig
+        2: variable.other.zig_local
+        3: storage.type.zig
   function_def:
     - match: '\b(fn)\s+([a-zA-Z_]\w*|@\".+\")(\()'
       captures:
         1: storage.type.function.zig
-        2: entity.name.function
+        2: entity.name.function.zig_local
         3: punctuation.section.parens.begin.zig
       push:
         - include: label
@@ -134,6 +188,22 @@ contexts:
           scope: punctuation.section.parens.end.zig
           set: function_def_after_params
         - include: dummy_main
+  # pub_function_def:
+  #   - match: '\b(pub)\s+(fn)\s+([a-zA-Z_]\w*|@\".+\")(\()'
+  #     captures:
+  #       1: storage.modifier.zig
+  #       2: storage.type.function.zig
+  #       3: entity.name.function.zig_pub
+  #       4: punctuation.section.parens.begin.zig
+  #     push:
+  #       - include: label
+  #       - include: param_list
+  #       - match: '([a-zA-Z_][\w.]*|@\".+\")'
+  #         scope: storage.type.zig
+  #       - match: '\)'
+  #         scope: punctuation.section.parens.end.zig
+  #         set: function_def_after_params
+  #       - include: dummy_main
   function_def_after_params:
     # TODO: be more precise here
     - match: '\s*([a-zA-Z_][\w.]*|@\".+\")?(!)?\s*(?:([a-zA-Z_][\w.]*|@\".+\")\b(?!\s*\())?'
@@ -244,7 +314,7 @@ contexts:
     - match: \berror\b
       scope: storage.type.error.zig
   storage_modifier:
-    - match: \b(const|var|extern|packed|export|pub|noalias|inline|noinline|comptime|volatile|align|linksection|threadlocal|allowzero)\b
+    - match: \b(extern|packed|export|noalias|inline|noinline|comptime|volatile|align|linksection|threadlocal|allowzero)\b
       scope: storage.modifier.zig
   strings:
     - match: \'
@@ -278,6 +348,7 @@ contexts:
     - match: '\b[_a-zA-Z][_a-zA-Z0-9]*_t\b'
       scope: entity.name.type.zig
 
+      # XXX: this picks up the second half of the array list
     - match: '\b[A-Z][a-zA-Z0-9]*\b'
       scope: entity.name.type.zig
 

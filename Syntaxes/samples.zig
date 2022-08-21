@@ -1,6 +1,18 @@
 // this is a syntactically meaningless collection of sample
 // keywords and constructs to use in testing.
 
+// XXX(mason): testing indexing of public vs private variables in the goto definition menu
+fn sym() void {}
+pub fn sym() void {}
+pub const sym: i32 = 10;
+pub var sym: f32 = 1.0;
+var sym: f32 = 1.0;
+const sym: i32 = 10;
+
+// XXX(mason): rhs shouldn't show up in symbol list
+const ArrayListUnmanaged = std.ArrayListUnmanaged;
+pub const ArrayListUnmanagedPub = std.ArrayListUnmanaged;
+
 const var extern packed export pub noalias inline comptime nakedcc stdcallcc volatile align linksection threadlocal
 
  const as = 2;
